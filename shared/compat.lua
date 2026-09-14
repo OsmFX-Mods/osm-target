@@ -3,8 +3,9 @@ local Schema = OsmTargetSchema
 local Compat = {}
 
 ---Wrap legacy canInteract predicate: adapt legacy (entity, distance, option) parameters to internal resolver.
+-- Truthiness check only: callbacks from other resources arrive as callable funcref tables, not functions.
 local function wrapLegacyCanInteract(fn, option)
-  if type(fn) ~= 'function' then return nil end
+  if not fn then return nil end
   return function(entity, distance, _coords, _name, _bone)
     local ok, reason = fn(entity, distance, option)
     return ok, reason
@@ -179,7 +180,7 @@ function Compat.fromQb(v, ctx)
   option.canInteract = wrapLegacyCanInteract(v.canInteract, v)
 
   -- Map action callback: preserve legacy raw entity parameter passing
-  if type(v.action) == 'function' then
+  if v.action then
     option.onSelect = v.action
   end
 
@@ -237,7 +238,7 @@ function Compat.fromQtarget(v, ctx)
 
   option.canInteract = wrapLegacyCanInteract(v.canInteract, v)
 
-  if type(v.action) == 'function' then
+  if v.action then
     option.onSelect = v.action
   end
 

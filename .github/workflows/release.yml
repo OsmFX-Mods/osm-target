@@ -40,7 +40,7 @@ jobs:
       - name: Stage release bundle
         run: |
           mkdir -p staging/osm-target
-          cp -r fxmanifest.lua config.lua LICENSE README.md staging/osm-target/
+          cp -r fxmanifest.lua config.lua LICENSE README.md CHANGELOG.md staging/osm-target/
           cp -r client server shared locales sql html designs docs staging/osm-target/
           cd staging
           zip -r ../osm-target.zip osm-target
@@ -49,6 +49,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: osm-target.zip
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false

@@ -418,6 +418,8 @@ local function confirm()
   end
 
   Nui.sfx('confirm')
+  -- End session on execute: key must be pressed again to re-target (ox_target / qb-target parity)
+  requested = false
   execute(option)
   release()
 end

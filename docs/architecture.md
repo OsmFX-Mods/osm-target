@@ -155,6 +155,7 @@ The interaction loop operates on a finite state machine:
 
 - **Hysteresis Controls**: `snapAngle`, `releaseAngle`, and `releaseTime` work in tandem to ensure stable locking and prevent unwanted menu closing during camera adjustments.
 - **Target Lock**: Once in the `MAGNETISED` or `MENU_OPEN` state, the targeting raycast locks to the active entity until explicitly released.
+- **Session End on Execute**: Confirming an actionable option ends the targeting session and returns to `IDLE`, even if the key is still held. The key must be released and pressed again to re-target (matches ox_target / qb-target). Cancelling or looking away while the key is held returns to `SWEEPING` instead.
 
 ---
 
