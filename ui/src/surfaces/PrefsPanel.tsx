@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { fetchNui } from '../lib/nui'
 import { Button, Field, NumberSlider, SectionTitle, Toggle } from '../components/primitives'
@@ -9,13 +9,31 @@ interface Props {
   onClose: () => void
 }
 
+const SAVE_DEBOUNCE_MS = 300
+
 export function PrefsPanel({ initial, onClose }: Props) {
   const [prefs, setPrefs] = useState<Preferences>(initial)
+  const prefsRef = useRef(prefs)
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // Flush any pending save immediately if the panel closes mid-debounce (button close or the
+  // 'prefs:close' NUI event both unmount this component without waiting for the timer).
+  useEffect(() => () => {
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current)
+      void fetchNui('savePrefs', prefsRef.current)
+    }
+  }, [])
 
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) => {
     const next = { ...prefs, [key]: value }
     setPrefs(next)
-    void fetchNui('savePrefs', next)
+    prefsRef.current = next
+    clearTimeout(saveTimeout.current)
+    saveTimeout.current = setTimeout(() => {
+      saveTimeout.current = undefined
+      void fetchNui('savePrefs', next)
+    }, SAVE_DEBOUNCE_MS)
   }
 
   return (
