@@ -116,8 +116,9 @@ end
 1. **Mouse Aiming**: osm-target utilizes mouse wheel scrolling for option selection and does not capture NUI focus during standard targeting interactions. `EnableNUI` and `DisableNUI` calls from legacy scripts are safely handled without interfering with mouse aim.
 2. **PolyZone Shims**: `qb-target` zone creation functions return a lightweight zone shim supporting `:destroy()` and `:isPointInside(coords)`.
 3. **Vertical Bounding**: `minZ` and `maxZ` bounds are mapped to true 3D bounding boxes to ensure vertical zoning accuracy.
-4. **Circle Zones**: `AddCircleZone` creates a spherical zone volume rather than an unbounded vertical cylinder, matching `ox_target` behavior. Interactions requiring unbounded vertical reach should register as box zones.
-5. **Network Entity IDs**: Server event payloads receive `entity` as a network ID (or `0` if non-networked), providing consistent server-side entity resolution.
-6. **Entity Statebags & Relays**: Registering options on a networked entity automatically sets the `hasTargetOptions` statebag. The `ox_target:toggleEntityDoor` server event is relayed to the entity owner for compatibility with external vehicle door scripts.
-7. **Built-in Vehicle Door Options**: Optional vehicle door interactions matching `ox_target` defaults can be enabled by setting `Config.Defaults.vehicleDoors = true`.
-8. **Disabled vs Hidden Options**: Options failing job, gang, or item checks render in an explained disabled state by default. Set `Config.Options.showDisabled = false` to replicate legacy behavior where ineligible options are hidden completely.
+4. **Circle Zones**: `qb-target` `AddCircleZone` matches PolyZone: an unbounded vertical cylinder unless `useZ = true`, which makes it a sphere. `qtarget` `AddCircleZone` creates a sphere, matching `ox_target`'s qtarget compat.
+5. **Aimed Zone Targeting**: Zones are tested against the camera raycast hit point and option distance is measured from the player to that point, exactly like `ox_target` / `qb-target`. Small zones (shop counters, ATMs) work without aiming at their centre.
+6. **Network Entity IDs**: Server event payloads receive `entity` as a network ID (or `0` if non-networked), providing consistent server-side entity resolution.
+7. **Entity Statebags & Relays**: Registering options on a networked entity automatically sets the `hasTargetOptions` statebag. The `ox_target:toggleEntityDoor` server event is relayed to the entity owner for compatibility with external vehicle door scripts.
+8. **Built-in Vehicle Door Options**: Door, hood and trunk toggles matching `ox_target` defaults are enabled by default. Disable with `Config.Defaults.vehicleDoors = false` or `setr ox_target:defaults 0`.
+9. **Disabled vs Hidden Options**: Options failing job, gang, or item checks render in an explained disabled state by default. Set `Config.Options.showDisabled = false` to replicate legacy behavior where ineligible options are hidden completely.

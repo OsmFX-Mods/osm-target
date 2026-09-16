@@ -37,7 +37,7 @@ Config.Input = {
 
 Config.Interaction = {
     distance = 7.0,        -- Maximum interaction distance in meters
-    raycastDistance = 12.0,-- Camera raycast length
+    raycastDistance = 20.0,-- Camera raycast length
     scanInterval = 50,     -- Raycast throttle interval in milliseconds
     snapAngle = 4.0,       -- Degrees: angle threshold to lock target
     releaseAngle = 6.0,    -- Degrees: angle threshold to start releasing target

@@ -17,12 +17,12 @@ Locales['en'] = {
   not_eligible = 'You cannot do this',
 
   -- Built-in vehicle door labels (Config.Defaults.vehicleDoors)
-  door_front_driver = 'Front driver door',
-  door_front_passenger = 'Front passenger door',
-  door_rear_driver = 'Rear driver door',
-  door_rear_passenger = 'Rear passenger door',
-  door_hood = 'Hood',
-  door_trunk = 'Trunk',
+  door_front_driver = 'Toggle front driver door',
+  door_front_passenger = 'Toggle front passenger door',
+  door_rear_driver = 'Toggle rear driver door',
+  door_rear_passenger = 'Toggle rear passenger door',
+  door_hood = 'Toggle hood',
+  door_trunk = 'Toggle trunk',
 
   go_back = 'Back',
   no_options = 'Nothing to do here',

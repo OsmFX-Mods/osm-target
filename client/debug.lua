@@ -82,13 +82,7 @@ end)
 function Debug.explain()
   local scan = Hit.scan()
   local context = Hit.context(scan, nil)
-  local candidates = Store.candidatesForEntity(scan.entity, scan.entityType, scan.model, scan.distance)
-
-  local zones = Store.zonesContaining(scan.coords)
-  for i = 1, #zones do
-    local zoneCandidates = Store.candidatesForZone(zones[i], scan.distance)
-    for j = 1, #zoneCandidates do candidates[#candidates + 1] = zoneCandidates[j] end
-  end
+  local _, candidates = Hit.resolve(scan, nil)
 
   print(('^5[osm-target] hit entity=%s type=%s model=%s distance=%.2f candidates=%d^7')
     :format(scan.entity, scan.entityType, tostring(scan.model), scan.distance, #candidates))

@@ -1,5 +1,7 @@
 -- Default vehicle doors: register built-in vehicle door options for ox_target parity
 if not (Config.Defaults and Config.Defaults.vehicleDoors) then return end
+-- Honour ox_target convar: servers that disabled ox_target defaults keep them disabled after switching
+if GetConvarInt('ox_target:defaults', 1) ~= 1 then return end
 
 local DOOR_BONES = {
   [0] = 'dside_f',

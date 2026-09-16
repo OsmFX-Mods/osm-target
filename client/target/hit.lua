@@ -3,15 +3,10 @@ local Resolver = OsmTargetResolver
 Hit = {}
 
 local FLAGS = 511      -- INCLUDE_ALL
+local ENTITY_FLAGS = 26 -- VEHICLES | PEDS | OBJECTS (skips map geometry)
 local IGNORE = 4       -- NO_COLLISION
 
----Scan interaction raycast: perform camera raycast to detect targeted entity.
----@return table? target
-function Hit.scan()
-  local origin = GetEntityCoords(cache.ped)
-  local hit, entity, coords = lib.raycast.fromCamera(FLAGS, IGNORE, Config.Interaction.raycastDistance)
-  local distance = #(origin - coords)
-
+local function describe(entity, coords)
   local entityType, model, offset = 0, nil, nil
 
   if entity and entity ~= 0 then
@@ -30,18 +25,62 @@ function Hit.scan()
     end
   end
 
+  return entity or 0, entityType, model, offset
+end
+
+---Scan interaction raycast: perform camera raycast to detect targeted entity and aimed zones.
+---@return table? target
+function Hit.scan()
+  local origin = GetEntityCoords(cache.ped)
+  local hit, entity, coords = lib.raycast.fromCamera(FLAGS, IGNORE, Config.Interaction.raycastDistance)
+  local entityType, model, offset
+  entity, entityType, model, offset = describe(entity, coords)
+
+  -- Zones use the aimed world point: ox_target / qb-target test zone containment against the raycast end coords
+  local zones = Store.zonesContaining(coords)
+
+  -- Entity-only fallback ray: ox_target alternates flag 26 so entities embedded in map collision stay targetable when LOS is clear
+  if entity == 0 and #zones == 0 then
+    local _, entityHit, entityCoords = lib.raycast.fromCamera(ENTITY_FLAGS, IGNORE, Config.Interaction.raycastDistance)
+    if entityHit and entityHit ~= 0 and HasEntityClearLosToEntity(entityHit, cache.ped, 7) then
+      local found, foundType, foundModel, foundOffset = describe(entityHit, entityCoords)
+      if found ~= 0 then
+        hit, coords = true, entityCoords
+        entity, entityType, model, offset = found, foundType, foundModel, foundOffset
+      end
+    end
+  end
+
   return {
     hit = hit,
-    entity = entity or 0,
+    entity = entity,
     entityType = entityType,
     model = model,
     coords = coords,
     offset = offset,
-    distance = distance,
+    distance = #(origin - coords),
+    zones = zones,
+    zone = zones[1],
   }
 end
 
+-- Bone tolerances: ox_target accepts a single bone within 2.0 and the closest of a bone list within 1.0
 local BONE_TOLERANCE = 2.0
+local BONE_LIST_TOLERANCE = 1.0
+
+---Resolve option offset in world space: scale relative offsets by model dimensions like ox_target.
+---@return vector3?
+local function offsetWorld(target, option)
+  if not target.model then return nil end
+
+  local offset = option.offset
+  if not option.absoluteOffset then
+    local minimum, maximum = GetModelDimensions(target.model)
+    offset = (maximum - minimum) * offset + minimum
+  end
+
+  return GetOffsetFromEntityInWorldCoords(target.entity, offset.x, offset.y, offset.z)
+end
 
 ---Create spatial attachment evaluator: verify bone or model offset matching for hit target.
 function Hit.makeSpatial(target)
@@ -57,14 +96,15 @@ function Hit.makeSpatial(target)
 
     if option.bones then
       local bones = option.bones
-      if type(bones) == 'string' then bones = { bones } end
+      local tolerance = BONE_LIST_TOLERANCE
+      if type(bones) == 'string' then bones, tolerance = { bones }, BONE_TOLERANCE end
 
       local bestId, bestDistance
       for i = 1, #bones do
         local boneId = GetEntityBoneIndexByName(entity, bones[i])
         if boneId ~= -1 then
           local distance = #(endCoords - GetEntityBonePosition_2(entity, boneId))
-          if distance <= BONE_TOLERANCE and (not bestDistance or distance < bestDistance) then
+          if distance <= tolerance and (not bestDistance or distance < bestDistance) then
             bestId, bestDistance = boneId, distance
           end
         end
@@ -75,22 +115,13 @@ function Hit.makeSpatial(target)
     end
 
     if option.offset then
-      if not target.model then return false end
-
-      local offset = option.offset
-      if not option.absoluteOffset then
-        local minimum, maximum = GetModelDimensions(target.model)
-        offset = (maximum - minimum) * offset + minimum
-      end
-
-      local world = GetOffsetFromEntityInWorldCoords(entity, offset.x, offset.y, offset.z)
-      if #(endCoords - world) > (option.offsetSize or 1.0) then return false end
+      local world = offsetWorld(target, option)
+      if not world or #(endCoords - world) > (option.offsetSize or 1.0) then return false end
     end
 
     return true
   end
 end
-
 ---Create interaction predicate runner: execute canInteract safely within pcall wrapper.
 function Hit.makeInteract(target)
   local coords = target.coords
@@ -129,26 +160,30 @@ end
 
 ---@return table[] resolved, table candidates
 function Hit.resolve(target, menu)
-  local candidates
+  local candidates = Store.candidatesForEntity(target.entity, target.entityType, target.model, target.distance)
 
-  if target.zone then
-    candidates = Store.candidatesForZone(target.zone, target.distance)
-  else
-    candidates = Store.candidatesForEntity(target.entity, target.entityType, target.model, target.distance)
+  -- Merge aimed zone options: ox_target lists entity and containing zone options together
+  local zones = target.zones or (target.zone and { target.zone })
+  if zones then
+    for i = 1, #zones do Store.appendZone(candidates, zones[i], target.distance) end
   end
 
   return Resolver.resolve(candidates, Hit.context(target, menu)), candidates
 end
 
----Calculate world anchor: resolve bone coordinate, model bounding center, or zone position.
+---Calculate world anchor: resolve bone coordinate, option offset, model bounding center, or aimed zone point.
 ---@return vector3
 function Hit.anchor(target, resolved)
   if target.entity and target.entity ~= 0 and DoesEntityExist(target.entity) then
     if resolved then
       for i = 1, #resolved do
-        local bone = resolved[i].bone
-        if bone then
-          return GetWorldPositionOfEntityBone(target.entity, bone)
+        local entry = resolved[i]
+        if entry.bone then
+          return GetWorldPositionOfEntityBone(target.entity, entry.bone)
+        end
+        if entry.option.offset and not entry.option.bones then
+          local world = offsetWorld(target, entry.option)
+          if world then return world end
         end
       end
     end
@@ -156,11 +191,9 @@ function Hit.anchor(target, resolved)
     return Discovery.entityAnchor(target.entity, target.model)
   end
 
-  if target.zone then return target.zone.coords end
-
-  return target.coords
+  -- Zone anchor: aimed point for raycast zone hits, zone centre for indicator snaps
+  return target.coords or (target.zone and target.zone.coords)
 end
-
 ---Calculate interaction distance: measure physical distance to bone, surface contact point, or anchor.
 ---@param target table
 ---@param anchor vector3?

@@ -107,7 +107,7 @@ local function firstFocusable()
 end
 
 ---Build callback response table: construct context payload for onSelect handler.
-local function buildResponse(option, forServer)
+local function buildResponse(option, forServer, zone)
   local response = {}
   for key, value in pairs(option) do
     response[key] = value
@@ -116,7 +116,8 @@ local function buildResponse(option, forServer)
   response.entity = target and target.entity ~= 0 and target.entity or nil
   response.coords = anchor or (target and target.coords) or nil
   response.distance = target and target.distance or nil
-  response.zone = target and target.zone and target.zone.id or nil
+  -- Report option zone: ox_target only sets response.zone when the selected option came from a zone
+  response.zone = zone and zone.id or nil
 
   if forServer then
     if response.entity then
@@ -143,26 +144,26 @@ local function buildResponse(option, forServer)
 end
 
 ---Execute callback: handle dialect-specific parameter requirements.
-local function execute(option)
+local function execute(option, zone)
   if option.onSelect then
     if option.qb or option.qtarget then
       option.onSelect(target and target.entity ~= 0 and target.entity or nil)
     else
-      option.onSelect(buildResponse(option))
+      option.onSelect(buildResponse(option, false, zone))
     end
   elseif option.export then
-    local resource = option.resource or (target and target.zone and target.zone.resource)
+    local resource = option.resource or (zone and zone.resource)
     if resource then
-      exports[resource][option.export](nil, buildResponse(option))
+      exports[resource][option.export](nil, buildResponse(option, false, zone))
     end
   elseif option.event then
-    TriggerEvent(option.event, buildResponse(option))
+    TriggerEvent(option.event, buildResponse(option, false, zone))
   elseif option.serverEvent then
-    TriggerServerEvent(option.serverEvent, buildResponse(option, true))
+    TriggerServerEvent(option.serverEvent, buildResponse(option, true, zone))
   elseif option.command then
     ExecuteCommand(option.command)
   elseif option.qbCommand then
-    TriggerServerEvent('QBCore:CallCommand', option.qbCommand, buildResponse(option, true))
+    TriggerServerEvent('QBCore:CallCommand', option.qbCommand, buildResponse(option, true, zone))
   end
 end
 
@@ -208,38 +209,18 @@ local function resolveTarget(preserveFocusName, precomputed)
   focus = firstFocusable()
 end
 
----Acquire interactive target: check direct raycast hit, containing zone, or nearest snap indicator.
+---Acquire interactive target: check direct raycast hit (entity and aimed zones), or nearest snap indicator.
 local function acquire(origin, forward)
   local scan = Hit.scan()
-  local reach = Config.Interaction.distance
 
-  if scan.entity ~= 0 and scan.distance <= reach then
+  -- Direct aim wins: entity and zone options resolve against the aimed point with player-to-hit distance (ox_target / qb-target parity)
+  if scan.distance <= Config.Interaction.distance and (scan.entity ~= 0 or scan.zone) then
     local list = Hit.resolve(scan, menuName)
     if #list > 0 then
       scan.resolved = list
       scan.angle = 0.0
       scan.anchor = Hit.anchor(scan, list)
       return scan
-    end
-  end
-
-  -- Check containing zones: evaluate zones encompassing the hit coordinates
-  local zones = Store.zonesContaining(scan.coords)
-  for i = 1, #zones do
-    local zone = zones[i]
-    local distance = #(GetEntityCoords(cache.ped) - zone.coords)
-    if distance <= reach then
-      local candidate = {
-        entity = 0, entityType = 0, model = nil,
-        coords = scan.coords, distance = distance, zone = zone,
-      }
-      local list = Hit.resolve(candidate, menuName)
-      if #list > 0 then
-        candidate.resolved = list
-        candidate.angle = angleTo(origin, forward, zone.coords)
-        candidate.anchor = zone.coords
-        return candidate
-      end
     end
   end
 
@@ -420,7 +401,7 @@ local function confirm()
   Nui.sfx('confirm')
   -- End session on execute: key must be pressed again to re-target (ox_target / qb-target parity)
   requested = false
-  execute(option)
+  execute(option, entry.ref and entry.ref.zone)
   release()
 end
 
@@ -498,11 +479,13 @@ local function logicTick()
     local angle = angleTo(origin, forward, anchor)
 
     if angle > Config.Interaction.releaseAngle then
-      local lookingAtTarget = false
-      if target.entity and target.entity ~= 0 then
-        local scan = Hit.scan()
-        if scan and scan.entity == target.entity then
-          lookingAtTarget = true
+      -- Keep menu while still aiming at the target: same entity or any point inside a targeted zone
+      local scan = Hit.scan()
+      local lookingAtTarget = target.entity and target.entity ~= 0 and scan.entity == target.entity
+      if not lookingAtTarget and target.zone then
+        local zones = target.zones or { target.zone }
+        for i = 1, #zones do
+          if zones[i]:contains(scan.coords) then lookingAtTarget = true break end
         end
       end
 

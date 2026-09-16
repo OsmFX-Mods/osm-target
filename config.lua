@@ -58,8 +58,8 @@ Config.Interaction = {
   -- Max distance: interaction range limit in meters
   distance = 7.0,
 
-  -- Raycast length: camera raycast range in meters
-  raycastDistance = 12.0,
+  -- Raycast length: camera raycast range in meters (ox_target uses 20)
+  raycastDistance = 20.0,
 
   -- Scan rate: raycast interval in milliseconds while sweeping
   scanInterval = 50,
@@ -128,9 +128,9 @@ Config.Options = {
   focusDisabled = true,
 }
 
--- Default vehicle interactions: register built-in vehicle door options (ox_target parity)
+-- Default vehicle interactions: built-in door, hood and trunk options (ox_target parity, also disabled by setr ox_target:defaults 0)
 Config.Defaults = {
-  vehicleDoors = false,
+  vehicleDoors = true,
 }
 
 -- Default design: initial design fallback used before database sync or if selected pack is missing

@@ -87,6 +87,14 @@ register('AddCircleZone', function(name, center, radius, options, targetoptions)
     debug = options and options.debugPoly,
   }), raw, DIALECT, ctx)
 
+  -- Unbounded circle without useZ: qb-target PolyZone CircleZone ignores height unless useZ is set
+  if not (options and options.useZ) then
+    zone.contains = function(self, coords, updateDistance)
+      if updateDistance then self.distance = #(self.coords - coords) end
+      return #(self.coords.xy - coords.xy) < self.radius
+    end
+  end
+
   return makeShim(name, { zone.id }, targetoptions)
 end)
 

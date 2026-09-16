@@ -132,12 +132,24 @@ function Store.candidatesForEntity(entity, entityType, model, distance, specific
   return out
 end
 
+---Append zone candidates: tag each option with its zone so responses report the right zone id.
+---@param out table[]
+---@param zone table an ox_lib zone we own
+---@param distance number
+function Store.appendZone(out, zone, distance)
+  local options = zone.options
+  if not options then return end
+  for i = 1, #options do
+    out[#out + 1] = { option = options[i], distance = distance, zone = zone }
+  end
+end
+
 ---@param zone table an ox_lib zone we own
 ---@param distance number
 function Store.candidatesForZone(zone, distance)
   local out = {}
   append(out, Store.global, 0)
-  append(out, zone.options, distance)
+  Store.appendZone(out, zone, distance)
   return out
 end
 
