@@ -1,8 +1,5 @@
 ## What's Changed
 
-- **Fixed zone interactions not opening** (e.g. Ammunation and other ox_inventory shop counters): zones are now checked at the point you aim at, with distance measured from the player to that point, exactly like ox_target / qb-target. Small and thin zones work without aiming at their exact centre.
-- **Entity + zone options merged** into one menu like ox_target; `response.zone` only set for zone options.
-- **Entity fallback raycast** from ox_target so props embedded in map collision stay targetable.
-- **Default vehicle interactions enabled**: toggle doors, hood and trunk, matching ox_target defaults. Disable with `Config.Defaults.vehicleDoors = false` or `setr ox_target:defaults 0`.
-- **qb-target circle zones** without `useZ` now ignore height, matching PolyZone.
-- Raycast length 20 m, ox_target bone-list tolerance, hood/trunk menus anchor at the offset point.
+- **Global options without a target** (opt-in, `Config.Interaction.globalsWithoutTarget` or the new toggle in `/targetadmin` > Options): like ox_target, `addGlobalOption` options can now appear when you are not aiming at anything, in a menu just in front of the player. Turn it on for escort/drag scripts such as p_policejob, whose "Release" option otherwise only showed on nearby poles and cones.
+- **Per-option control** with `showWithoutTarget = true / false` on any global option.
+- Off by default: existing servers behave exactly as before until it is enabled.

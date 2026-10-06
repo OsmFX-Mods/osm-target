@@ -44,6 +44,7 @@ Config.Interaction = {
     releaseTime = 180,     -- Milliseconds to hold beyond releaseAngle before closing
     openTime = 220,        -- Menu open animation duration in milliseconds
     closeTime = 160,       -- Menu close animation duration in milliseconds
+    globalsWithoutTarget = false, -- Offer global options when nothing is targeted (ox_target parity)
 }
 
 Config.Indicators = {
@@ -76,6 +77,19 @@ The interaction engine uses three complementary hysteresis settings to ensure sm
 | `snapAngle` | `4.0°` | The cone threshold from camera forward vector required to acquire and magnetize a target. |
 | `releaseAngle` | `6.0°` | The angle that must be exceeded before release evaluation begins. Enforced to be larger than `snapAngle`. |
 | `releaseTime` | `180ms` | Duration the camera must remain outside `releaseAngle` before the menu dissolves. |
+
+---
+
+## Untargeted Global Options
+
+`ox_target` evaluates `addGlobalOption` options even when the raycast hits nothing, so scripts can offer actions that are not tied to an entity (for example a "Release" option shown anywhere while escorting a player). osm-target only does this when enabled:
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `Config.Interaction.globalsWithoutTarget` | `false` | When the aim finds no entity, zone or indicator, resolve global options with entity `0` and open the menu in front of the player. |
+| `showWithoutTarget` (per option) | `nil` | `true` / `false` overrides the global setting for that option. `nil` follows the global setting. |
+
+Only options registered through `addGlobalOption` take part. Aimed entities, zones and indicators always take priority, and an open untargeted menu hands over as soon as the aim finds a real target.
 
 ---
 

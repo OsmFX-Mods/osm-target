@@ -72,6 +72,10 @@ Config.Interaction = {
   -- Animation timings: open and close transition durations in milliseconds
   openTime = 220,
   closeTime = 160,
+
+  -- Untargeted globals: offer addGlobalOption options when the aim finds no entity, zone or indicator (ox_target parity).
+  -- The menu anchors in front of the player. Per-option showWithoutTarget = true/false overrides this.
+  globalsWithoutTarget = false,
 }
 
 Config.Indicators = {

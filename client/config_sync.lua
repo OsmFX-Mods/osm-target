@@ -29,6 +29,7 @@ local function applySystem(system)
   if system.releaseTime ~= nil then interaction.releaseTime = system.releaseTime end
   if system.openTime ~= nil then interaction.openTime = system.openTime end
   if system.closeTime ~= nil then interaction.closeTime = system.closeTime end
+  if system.globalsWithoutTarget ~= nil then interaction.globalsWithoutTarget = system.globalsWithoutTarget and true or false end
 
   local indicators = Config.Indicators
   if system.indicatorsEnabled ~= nil then indicators.enabled = system.indicatorsEnabled and true or false end

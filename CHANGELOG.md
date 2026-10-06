@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.4] - 2026-10-06
+- Added opt-in untargeted global options (`Config.Interaction.globalsWithoutTarget`, default off). When the aim finds no entity, zone or indicator, `addGlobalOption` options are offered in a menu anchored in front of the player, matching ox_target. Fixes escort scripts (e.g. p_policejob "Release" while dragging) whose global option only appeared on whatever prop was under the crosshair.
+- Added the per-option `showWithoutTarget` field to opt a global option in or out regardless of the server setting.
+- Untargeted options receive entity `0` in `canInteract`, `data.entity` and legacy callbacks, like ox_target. An open untargeted menu hands over as soon as the aim finds a real target.
+- Added "Global options without a target" to the `/targetadmin` Options panel.
+
 ## [1.0.3] - 2026-09-16
 - Fixed zone interactions (e.g. ox_inventory Ammunation counters) not opening. Zones are now tested against the aimed raycast point with player-to-hit distance, matching ox_target / qb-target, instead of requiring the crosshair within 4 degrees of the zone centre.
 - Entity and zone options under the crosshair are now merged into one menu like ox_target, and `response.zone` is only set for options that came from a zone.

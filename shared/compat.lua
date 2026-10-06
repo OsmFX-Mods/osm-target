@@ -121,6 +121,7 @@ function Compat.fromOx(v, ctx)
 
     canInteract = v.canInteract,
     hideWhenIneligible = v.hideWhenIneligible,
+    showWithoutTarget = v.showWithoutTarget,
 
     onSelect = v.onSelect,
     export = v.export,
@@ -170,6 +171,7 @@ function Compat.fromQb(v, ctx)
     offsetSize = v.offsetSize,
 
     hideWhenIneligible = v.hideWhenIneligible,
+    showWithoutTarget = v.showWithoutTarget,
 
     order = v.num,
     resource = ctx.resource,
@@ -229,6 +231,7 @@ function Compat.fromQtarget(v, ctx)
     offsetSize = v.offsetSize,
 
     hideWhenIneligible = v.hideWhenIneligible,
+    showWithoutTarget = v.showWithoutTarget,
 
     order = v.num,
     resource = ctx.resource,

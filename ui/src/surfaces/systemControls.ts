@@ -65,6 +65,7 @@ export const SYSTEM_GROUPS: SystemGroup[] = [
       { key: 'hideUnexplained', label: 'Hide unexplained gates', type: 'boolean', help: 'A legacy check that refuses without a reason. On keeps the historical behaviour.' },
       { key: 'focusDisabled', label: 'Gated options are focusable', type: 'boolean', help: 'Needed for the player to scroll onto one and read the requirement.' },
       { key: 'defaultDistance', label: 'Default option distance', type: 'number', min: 1, max: 20, step: 0.5, unit: 'm' },
+      { key: 'globalsWithoutTarget', label: 'Global options without a target', type: 'boolean', help: 'Offers addGlobalOption options when nothing is aimed at, in front of the player, like ox_target. Needed for escort "Release" style actions.' },
     ],
   },
   {

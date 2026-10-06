@@ -153,6 +153,24 @@ function Store.candidatesForZone(zone, distance)
   return out
 end
 
+---Collect untargeted candidates: global options allowed to resolve when the aim finds nothing (ox_target parity).
+-- Per-option showWithoutTarget overrides Config.Interaction.globalsWithoutTarget.
+---@return table[] candidates
+function Store.candidatesUntargeted()
+  local out = {}
+  local enabled = Config.Interaction.globalsWithoutTarget == true
+  local global = Store.global
+
+  for i = 1, #global do
+    local option = global[i]
+    local allowed = option.showWithoutTarget
+    if allowed == nil then allowed = enabled end
+    if allowed then out[#out + 1] = { option = option, distance = 0 } end
+  end
+
+  return out
+end
+
 ---Find zones containing coordinates, sorted by nearest first.
 ---@return table[] zones
 function Store.zonesContaining(coords)

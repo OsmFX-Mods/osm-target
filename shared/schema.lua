@@ -14,7 +14,7 @@ Schema.RESERVED = {
 
   bones = true, offset = true, offsetSize = true, absoluteOffset = true,
 
-  canInteract = true, hideWhenIneligible = true,
+  canInteract = true, hideWhenIneligible = true, showWithoutTarget = true,
 
   onSelect = true, export = true, event = true, serverEvent = true,
   command = true, qbCommand = true, openMenu = true, menuName = true,

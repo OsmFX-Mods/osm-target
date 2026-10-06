@@ -16,6 +16,7 @@ local function defaultSystem()
     releaseTime = Config.Interaction.releaseTime,
     openTime = Config.Interaction.openTime,
     closeTime = Config.Interaction.closeTime,
+    globalsWithoutTarget = Config.Interaction.globalsWithoutTarget,
 
     indicatorsEnabled = Config.Indicators.enabled,
     indicatorRadius = Config.Indicators.radius,
@@ -72,7 +73,7 @@ local SYSTEM_BOUNDS = {
 }
 
 local BOOLEAN_KEYS = {
-  'indicatorsEnabled', 'includeGlobals', 'showDisabled', 'hideUnexplained', 'focusDisabled', 'debug',
+  'globalsWithoutTarget', 'indicatorsEnabled', 'includeGlobals', 'showDisabled', 'hideUnexplained', 'focusDisabled', 'debug',
 }
 
 local function sanitiseSystem(system)

@@ -106,6 +106,14 @@ local function firstFocusable()
   return 1
 end
 
+---Resolve callback entity: untargeted sessions report 0 like ox_target, other entity-less targets report nil.
+local function targetEntity()
+  if not target then return nil end
+  if target.entity and target.entity ~= 0 then return target.entity end
+  if target.untargeted then return 0 end
+  return nil
+end
+
 ---Build callback response table: construct context payload for onSelect handler.
 local function buildResponse(option, forServer, zone)
   local response = {}
@@ -113,14 +121,14 @@ local function buildResponse(option, forServer, zone)
     response[key] = value
   end
 
-  response.entity = target and target.entity ~= 0 and target.entity or nil
+  response.entity = targetEntity()
   response.coords = anchor or (target and target.coords) or nil
   response.distance = target and target.distance or nil
   -- Report option zone: ox_target only sets response.zone when the selected option came from a zone
   response.zone = zone and zone.id or nil
 
   if forServer then
-    if response.entity then
+    if response.entity and response.entity ~= 0 then
       response.entity = NetworkGetEntityIsNetworked(response.entity)
         and NetworkGetNetworkIdFromEntity(response.entity) or 0
     end
@@ -147,7 +155,7 @@ end
 local function execute(option, zone)
   if option.onSelect then
     if option.qb or option.qtarget then
-      option.onSelect(target and target.entity ~= 0 and target.entity or nil)
+      option.onSelect(targetEntity())
     else
       option.onSelect(buildResponse(option, false, zone))
     end
@@ -209,20 +217,43 @@ local function resolveTarget(preserveFocusName, precomputed)
   focus = firstFocusable()
 end
 
----Acquire interactive target: check direct raycast hit (entity and aimed zones), or nearest snap indicator.
+---Resolve direct aim: entity and zone options resolve against the aimed point with player-to-hit distance (ox_target / qb-target parity).
+local function aimed(scan)
+  if scan.distance > Config.Interaction.distance or (scan.entity == 0 and not scan.zone) then return nil end
+
+  local list = Hit.resolve(scan, menuName)
+  if #list == 0 then return nil end
+
+  scan.resolved = list
+  scan.angle = 0.0
+  scan.anchor = Hit.anchor(scan, list)
+  return scan
+end
+
+---Resolve untargeted session: offer opted-in global options when neither aim nor snap finds a target (ox_target parity).
+local function untargeted(scan)
+  local candidate = {
+    entity = 0, entityType = 0, model = nil,
+    coords = scan.coords, untargeted = true,
+  }
+
+  local list = Hit.resolve(candidate, menuName)
+  if #list == 0 then return nil end
+
+  candidate.anchor = Hit.anchor(candidate, list)
+  candidate.distance = Hit.distance(candidate, candidate.anchor, list)
+  candidate.resolved = list
+  candidate.angle = 0.0
+  return candidate
+end
+
+---Acquire interactive target: check direct raycast hit (entity and aimed zones), nearest snap indicator, then untargeted globals.
 local function acquire(origin, forward)
   local scan = Hit.scan()
 
-  -- Direct aim wins: entity and zone options resolve against the aimed point with player-to-hit distance (ox_target / qb-target parity)
-  if scan.distance <= Config.Interaction.distance and (scan.entity ~= 0 or scan.zone) then
-    local list = Hit.resolve(scan, menuName)
-    if #list > 0 then
-      scan.resolved = list
-      scan.angle = 0.0
-      scan.anchor = Hit.anchor(scan, list)
-      return scan
-    end
-  end
+  -- Direct aim wins: aimed entity and zone options take priority over snapping
+  local direct = aimed(scan)
+  if direct then return direct end
 
   -- Evaluate nearby indicators: locate nearest indicator within snap angle threshold
   local points = Discovery.points
@@ -238,29 +269,32 @@ local function acquire(origin, forward)
     end
   end
 
-  if not best then return nil end
+  if best then
+    local candidate
+    if best.kind == 'zone' then
+      candidate = {
+        entity = 0, entityType = 0, model = nil,
+        coords = best.coords, distance = best.distance, zone = best.zone,
+      }
+    else
+      candidate = {
+        entity = best.entity, entityType = best.entityType, model = best.model,
+        coords = best.coords, distance = best.distance,
+      }
+    end
 
-  local candidate
-  if best.kind == 'zone' then
-    candidate = {
-      entity = 0, entityType = 0, model = nil,
-      coords = best.coords, distance = best.distance, zone = best.zone,
-    }
-  else
-    candidate = {
-      entity = best.entity, entityType = best.entityType, model = best.model,
-      coords = best.coords, distance = best.distance,
-    }
+    local list = Hit.resolve(candidate, menuName)
+    if #list > 0 then
+      candidate.resolved = list
+      candidate.angle = bestAngle
+      candidate.anchor = best.coords
+      candidate.point = best
+      return candidate
+    end
   end
 
-  local list = Hit.resolve(candidate, menuName)
-  if #list == 0 then return nil end
-
-  candidate.resolved = list
-  candidate.angle = bestAngle
-  candidate.anchor = best.coords
-  candidate.point = best
-  return candidate
+  -- Untargeted fallback: global options opted in via globalsWithoutTarget / showWithoutTarget
+  return untargeted(scan)
 end
 
 local function magnetise(candidate)
@@ -388,7 +422,9 @@ local function confirm()
 
   -- Revalidate before execution: verify option eligibility before running action
   Player.refresh()
-  local allowed, reason = Resolver.canExecute(option, Hit.context(target, menuName), target.distance)
+  -- Untargeted globals resolve at distance 0 (ox_target parity), the anchor distance is only for rendering
+  local distance = target.untargeted and 0 or target.distance
+  local allowed, reason = Resolver.canExecute(option, Hit.context(target, menuName), distance)
 
   if not allowed then
     Nui.sfx('reject')
@@ -478,7 +514,16 @@ local function logicTick()
 
     local angle = angleTo(origin, forward, anchor)
 
-    if angle > Config.Interaction.releaseAngle then
+    if target.untargeted then
+      -- Yield untargeted menu: the anchor follows the player, so hand over once the aim finds a real target instead of measuring angle
+      if now - lastScan >= Config.Interaction.scanInterval then
+        lastScan = now
+        if aimed(Hit.scan()) then
+          release()
+          return
+        end
+      end
+    elseif angle > Config.Interaction.releaseAngle then
       -- Keep menu while still aiming at the target: same entity or any point inside a targeted zone
       local scan = Hit.scan()
       local lookingAtTarget = target.entity and target.entity ~= 0 and scan.entity == target.entity

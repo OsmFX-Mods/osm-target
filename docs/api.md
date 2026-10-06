@@ -47,6 +47,8 @@ target:addGlobalOption(options)     target:removeGlobalOption(optionNames?)
 
 Global class registrations apply to all entities matching the class when raycast. By default, they do not generate world indicators unless `Config.Indicators.includeGlobals` is enabled.
 
+`addGlobalOption` options can also be offered when nothing is targeted by enabling `Config.Interaction.globalsWithoutTarget` or setting `showWithoutTarget = true` on the option. See the [Configuration Guide](configuration.md#untargeted-global-options).
+
 ### Zone Registration
 
 Zones are backed by `ox_lib` spatial zones:
@@ -112,6 +114,7 @@ An option table accepts the following configuration:
     anyItem = true,              -- If true, possessing ANY declared item satisfies the gate
     citizenid = 'XYZ12345',      -- Specific character identifier requirement
     canInteract = function(entity, distance, coords, name, bone) end,
+    showWithoutTarget = true,    -- Global options only: also offer when nothing is targeted (overrides Config.Interaction.globalsWithoutTarget)
 
     -- Spatial attachments
     bones = { 'boot', 'bonnet' },-- Attached entity bones
@@ -178,7 +181,7 @@ When an option is selected and confirmed, the `onSelect` callback receives a con
 
 ```lua
 onSelect = function(data)
-    -- data.entity    Entity handle (nil for zone interactions)
+    -- data.entity    Entity handle (nil for zone interactions, 0 for untargeted global options)
     -- data.coords    Vector3 world position of the raycast hit
     -- data.distance  Distance from player to target at confirmation
     -- data.zone      Zone ID (when interaction originated from a zone)

@@ -130,9 +130,13 @@ function Hit.makeInteract(target)
     if ok and worldCoords then coords = worldCoords end
   end
 
+  -- Untargeted parity: ox_target hands canInteract a 0 entity when nothing is aimed at
+  local entity = target.entity ~= 0 and target.entity or nil
+  if target.untargeted then entity = 0 end
+
   return function(option, distance, bone)
     local ok, allowed, reason = pcall(option.canInteract,
-      target.entity ~= 0 and target.entity or nil, distance, coords, option.name, bone)
+      entity, distance, coords, option.name, bone)
     if not ok then return false end
     return allowed, reason
   end
@@ -160,6 +164,14 @@ end
 
 ---@return table[] resolved, table candidates
 function Hit.resolve(target, menu)
+  -- Untargeted sessions only ever resolve opted-in global options
+  if target.untargeted then
+    local candidates = Store.candidatesUntargeted()
+    -- Skip context build when nothing opted in: keeps the disabled default free while sweeping
+    if #candidates == 0 then return {}, candidates end
+    return Resolver.resolve(candidates, Hit.context(target, menu)), candidates
+  end
+
   local candidates = Store.candidatesForEntity(target.entity, target.entityType, target.model, target.distance)
 
   -- Merge aimed zone options: ox_target lists entity and containing zone options together
@@ -171,9 +183,29 @@ function Hit.resolve(target, menu)
   return Resolver.resolve(candidates, Hit.context(target, menu)), candidates
 end
 
+-- Untargeted anchor: reach ahead of the player along camera heading, lifted towards chest height
+local UNTARGETED_REACH = 1.5
+local UNTARGETED_LIFT = 0.4
+
+---Calculate untargeted anchor: place menu in front of the player since there is no entity or zone to attach to.
+---@return vector3
+function Hit.untargetedAnchor()
+  local coords = GetEntityCoords(cache.ped)
+  local yaw = math.rad(GetFinalRenderedCamRot(2).z)
+  local lift = UNTARGETED_LIFT + (Config.Render.anchorLift or 0.0)
+
+  return vec3(
+    coords.x - math.sin(yaw) * UNTARGETED_REACH,
+    coords.y + math.cos(yaw) * UNTARGETED_REACH,
+    coords.z + lift
+  )
+end
+
 ---Calculate world anchor: resolve bone coordinate, option offset, model bounding center, or aimed zone point.
 ---@return vector3
 function Hit.anchor(target, resolved)
+  if target.untargeted then return Hit.untargetedAnchor() end
+
   if target.entity and target.entity ~= 0 and DoesEntityExist(target.entity) then
     if resolved then
       for i = 1, #resolved do

@@ -43,7 +43,7 @@ const store: { config: StoredConfig } = {
     designs: defaultDesignTunables(),
     system: {
       interactDistance: 7, raycastDistance: 12, scanInterval: 50,
-      snapAngle: 4, releaseAngle: 9, releaseTime: 180, openTime: 220, closeTime: 160,
+      snapAngle: 4, releaseAngle: 9, releaseTime: 180, openTime: 220, closeTime: 160, globalsWithoutTarget: false,
       indicatorsEnabled: true, indicatorRadius: 5, indicatorCap: 8,
       indicatorInterval: 250, indicatorNearAngle: 12, includeGlobals: false,
       menuSize: 0.4, indicatorSize: 0.042, cursorSize: 0.03,
